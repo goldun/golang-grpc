@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+option go_package = "goldun.com/quotes_proto";
+
+package quotes_proto;
+
+service QuotesService {
+  rpc GetQuote(QuoteRequest) returns (QuoteResponse) {}
+}
+
+
+message QuoteRequest {
+  string source = 1; // define a quote source (e.g. "Lock, Stock and Two Smoking Barrels", "Martin Luther King", "Bart Simpson", etc.)
+}
+
+message QuoteResponse {
+  repeated Quote quote = 1;
+}
+
+message Quote {
+  string source = 1;
+  string quote = 2;
+}
