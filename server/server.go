@@ -6,16 +6,20 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"goldun.com/quotes/auth"
+	pb "goldun.com/quotes/quotes_proto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"log"
 	"net"
 	"os"
-
-	pb "goldun.com/quotes/quotes_proto"
 )
 
 var (
-	port       = flag.Int("port", 8080, "The server port")
+	port       = flag.Int("port", 1443, "The server port")
+	tls        = flag.Bool("tls", true, "Connection uses TLS if true, else plain TCP")
+	certFile   = flag.String("cert_file", "", "The TLS cert file")
+	keyFile    = flag.String("key_file", "", "The TLS key file")
 	quotesFile = flag.String("quotes_file", "testdata/quotes.json", "The file with quotes")
 )
 
@@ -57,7 +61,22 @@ func newServer() *quotesServiceServer {
 }
 
 func main() {
-	grpcServer := grpc.NewServer()
+	flag.Parse()
+	var opts []grpc.ServerOption
+	if *tls {
+		if *certFile == "" {
+			*certFile = auth.Path("server_cert.pem")
+		}
+		if *keyFile == "" {
+			*keyFile = auth.Path("server_key.pem")
+		}
+		creds, err := credentials.NewServerTLSFromFile(*certFile, *keyFile)
+		if err != nil {
+			log.Fatalf("Failed to generate credentials: %v", err)
+		}
+		opts = []grpc.ServerOption{grpc.Creds(creds)}
+	}
+	grpcServer := grpc.NewServer(opts...)
 	pb.RegisterQuotesServiceServer(grpcServer, newServer())
 	log.Printf("listening on port: %d \n", *port)
 	lis, err := net.Listen("tcp", fmt.Sprintf("localhost:%d", *port))
